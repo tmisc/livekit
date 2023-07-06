@@ -6,14 +6,12 @@ import (
 
 	"github.com/livekit/livekit-server/pkg/sfu/buffer"
 	dede "github.com/livekit/livekit-server/pkg/sfu/dependencydescriptor"
-	"github.com/livekit/livekit-server/pkg/sfu/utils"
 	"github.com/livekit/protocol/logger"
 )
 
 type DependencyDescriptor struct {
 	*Base
 
-	frameNum  *utils.WrapAround[uint16, uint64]
 	decisions *SelectorDecisionCache
 
 	activeDecodeTargetsBitmask *uint32
@@ -27,17 +25,17 @@ type DependencyDescriptor struct {
 
 func NewDependencyDescriptor(logger logger.Logger) *DependencyDescriptor {
 	return &DependencyDescriptor{
-		Base:      NewBase(logger),
-		frameNum:  utils.NewWrapAround[uint16, uint64](),
-		decisions: NewSelectorDecisionCache(256, 80),
+		Base: NewBase(logger),
+		// frameNum:  utils.NewWrapAround[uint16, uint64](),
+		decisions: NewSelectorDecisionCache(256, 50),
 	}
 }
 
 func NewDependencyDescriptorFromNull(vls VideoLayerSelector) *DependencyDescriptor {
 	return &DependencyDescriptor{
-		Base:      vls.(*Null).Base,
-		frameNum:  utils.NewWrapAround[uint16, uint64](),
-		decisions: NewSelectorDecisionCache(256, 80),
+		Base: vls.(*Null).Base,
+		// frameNum:  utils.NewWrapAround[uint16, uint64](),
+		decisions: NewSelectorDecisionCache(256, 50),
 	}
 }
 
@@ -57,8 +55,8 @@ func (d *DependencyDescriptor) Select(extPkt *buffer.ExtPacket, _layer int32) (r
 	// a packet is relevant as long as it has DD extension
 	result.IsRelevant = true
 
-	frameNum := d.frameNum.Update(dd.FrameNumber)
-	extFrameNum := frameNum.ExtendedVal
+	// frameNum := d.frameNum.Update(dd.FrameNumber)
+	extFrameNum := ddwdt.ExtFrameNum
 
 	fd := dd.FrameDependencies
 	incomingLayer := buffer.VideoLayer{
@@ -238,18 +236,9 @@ func (d *DependencyDescriptor) Select(extPkt *buffer.ExtPacket, _layer int32) (r
 		result.DependencyDescriptorExtension = bytes
 	}
 
-	// DD-TODO START
-	// Ideally should add this frame only on the last packet of the frame and if all packets of the frame have been selected.
-	// But, adding on any packet so that any out-of-order packets within a frame can be fowarded.
-	// But, that could result in decodability/chain integrity to erroneously pass (i. e. in the case of lost packet in this
-	// frame, this frame is not decodable and hence the chain is broken).
-	//
-	// Note that packets can get lost in the forwarded path also. That will be handled by receiver sending PLI.
-	//
-	// Within SFU, there is more work to do to ensure integrity of forwarded packets/frames to adhere to the complete design
-	// goal of dependency descriptor
-	// DD-TODO END
-	d.decisions.AddForwarded(extFrameNum)
+	if ddwdt.Integrity {
+		d.decisions.AddForwarded(extFrameNum)
+	}
 	result.RTPMarker = extPkt.Packet.Header.Marker || (dd.LastPacketInFrame && d.currentLayer.Spatial == int32(fd.SpatialId))
 	result.IsSelected = true
 	return
