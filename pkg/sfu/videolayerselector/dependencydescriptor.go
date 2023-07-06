@@ -25,16 +25,14 @@ type DependencyDescriptor struct {
 
 func NewDependencyDescriptor(logger logger.Logger) *DependencyDescriptor {
 	return &DependencyDescriptor{
-		Base: NewBase(logger),
-		// frameNum:  utils.NewWrapAround[uint16, uint64](),
+		Base:      NewBase(logger),
 		decisions: NewSelectorDecisionCache(256, 50),
 	}
 }
 
 func NewDependencyDescriptorFromNull(vls VideoLayerSelector) *DependencyDescriptor {
 	return &DependencyDescriptor{
-		Base: vls.(*Null).Base,
-		// frameNum:  utils.NewWrapAround[uint16, uint64](),
+		Base:      vls.(*Null).Base,
 		decisions: NewSelectorDecisionCache(256, 50),
 	}
 }
@@ -55,7 +53,6 @@ func (d *DependencyDescriptor) Select(extPkt *buffer.ExtPacket, _layer int32) (r
 	// a packet is relevant as long as it has DD extension
 	result.IsRelevant = true
 
-	// frameNum := d.frameNum.Update(dd.FrameNumber)
 	extFrameNum := ddwdt.ExtFrameNum
 
 	fd := dd.FrameDependencies
