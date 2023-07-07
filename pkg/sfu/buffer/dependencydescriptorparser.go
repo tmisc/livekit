@@ -74,7 +74,7 @@ func (r *DependencyDescriptorParser) Parse(pkt *rtp.Packet) (*ExtDependencyDescr
 	}
 
 	extFN := r.frameWrapAround.Update(ddVal.FrameNumber).ExtendedVal
-	r.frameChecker.AddPacket(extFN, extSeq, &ddVal)
+	r.frameChecker.AddPacket(extSeq, extFN, &ddVal)
 
 	extDD := &ExtDependencyDescriptor{
 		Descriptor:  &ddVal,
